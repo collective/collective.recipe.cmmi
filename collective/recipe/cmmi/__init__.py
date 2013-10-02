@@ -2,9 +2,30 @@ from zc.recipe.cmmi import Recipe as Base
 from zc.recipe.cmmi import system
 import logging
 import os
+import tempfile
 
 
 class Recipe(Base):
+
+    def build(self):
+        tmp = None
+        if 'patches' in self.options:
+            if 'patch' in self.options:
+                raise ValueError("Can't use 'patch' and 'patches' together.")
+            patch_content = []
+            for patch in self.options['patches'].split():
+                patch_content.append(open(patch).read())
+            tmp = tempfile.mkstemp()
+            f = open(tmp[1], 'w')
+            f.write('\n'.join(patch_content))
+            f.close()
+            self.patch = tmp[1]
+        try:
+            result = Base.build(self)
+        finally:
+            if tmp:
+                os.remove(tmp[1])
+        return result
 
     def cmmi(self, dest):
         """Do the 'configure; make; make install' command sequence.
